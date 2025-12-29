@@ -5,7 +5,7 @@ import Foundation
 /// 设置管理器 - 管理应用设置的持久化
 class SettingsManager: SettingsManagerProtocol {
     private let userDefaults: UserDefaults
-    private var callbacks: [() -> Void] = []
+    private var callbacks: [UUID: () -> Void] = [:]
 
     private enum Keys {
         static let enabled = "voiceenter.enabled"
@@ -13,6 +13,7 @@ class SettingsManager: SettingsManagerProtocol {
     }
 
     private static let defaultTriggerWords = ["发送", "Go"]
+    private static let maxTriggerWordLength = 10
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -20,45 +21,97 @@ class SettingsManager: SettingsManagerProtocol {
 
     var isEnabled: Bool {
         get {
-            // TODO: 实现
-            fatalError("Not implemented")
+            // 默认值为 true
+            if userDefaults.object(forKey: Keys.enabled) == nil {
+                return true
+            }
+            return userDefaults.bool(forKey: Keys.enabled)
         }
         set {
-            // TODO: 实现
-            fatalError("Not implemented")
+            userDefaults.set(newValue, forKey: Keys.enabled)
+            notifyCallbacks()
         }
     }
 
     var triggerWords: [String] {
-        // TODO: 实现
-        fatalError("Not implemented")
+        if let words = userDefaults.stringArray(forKey: Keys.triggerWords) {
+            return words
+        }
+        return Self.defaultTriggerWords
     }
 
+    @discardableResult
     func addTriggerWord(_ word: String) -> Bool {
-        // TODO: 实现
-        fatalError("Not implemented")
+        // 去除首尾空格
+        let trimmedWord = word.trimmingCharacters(in: .whitespaces)
+
+        // 验证：不能为空
+        guard !trimmedWord.isEmpty else { return false }
+
+        // 验证：不能超过最大长度
+        guard trimmedWord.count <= Self.maxTriggerWordLength else { return false }
+
+        // 获取当前触发词
+        var currentWords = triggerWords
+
+        // 检查重复（英文不区分大小写）
+        let isDuplicate = currentWords.contains { existingWord in
+            if existingWord.allSatisfy({ $0.isASCII }) && trimmedWord.allSatisfy({ $0.isASCII }) {
+                return existingWord.lowercased() == trimmedWord.lowercased()
+            }
+            return existingWord == trimmedWord
+        }
+
+        guard !isDuplicate else { return false }
+
+        // 添加新触发词
+        currentWords.append(trimmedWord)
+        userDefaults.set(currentWords, forKey: Keys.triggerWords)
+        notifyCallbacks()
+        return true
     }
 
+    @discardableResult
     func removeTriggerWord(_ word: String) -> Bool {
-        // TODO: 实现
-        fatalError("Not implemented")
+        var currentWords = triggerWords
+
+        // 查找要删除的触发词
+        guard let index = currentWords.firstIndex(of: word) else { return false }
+
+        // 不能删除最后一个触发词
+        guard currentWords.count > 1 else { return false }
+
+        // 删除触发词
+        currentWords.remove(at: index)
+        userDefaults.set(currentWords, forKey: Keys.triggerWords)
+        notifyCallbacks()
+        return true
     }
 
     func resetToDefault() {
-        // TODO: 实现
-        fatalError("Not implemented")
+        userDefaults.removeObject(forKey: Keys.enabled)
+        userDefaults.removeObject(forKey: Keys.triggerWords)
+        notifyCallbacks()
     }
 
     func onSettingsChanged(_ callback: @escaping () -> Void) -> Cancellable {
-        // TODO: 实现
-        fatalError("Not implemented")
+        let id = UUID()
+        callbacks[id] = callback
+        return SettingsCancellable { [weak self] in
+            self?.callbacks.removeValue(forKey: id)
+        }
+    }
+
+    private func notifyCallbacks() {
+        for callback in callbacks.values {
+            callback()
+        }
     }
 }
 
 // MARK: - SettingsCancellable
 
 class SettingsCancellable: Cancellable {
-    private var callback: (() -> Void)?
     private var onCancel: (() -> Void)?
 
     init(onCancel: @escaping () -> Void) {

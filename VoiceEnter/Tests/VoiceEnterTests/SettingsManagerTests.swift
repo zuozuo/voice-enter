@@ -75,7 +75,7 @@ final class SettingsManagerTests: XCTestCase {
 
     func testAddDuplicateTriggerWordFails() {
         // 添加重复的触发词应该失败
-        settingsManager.addTriggerWord("OK")
+        _ = settingsManager.addTriggerWord("OK")
         let result = settingsManager.addTriggerWord("OK")
 
         XCTAssertFalse(result)
@@ -84,7 +84,7 @@ final class SettingsManagerTests: XCTestCase {
 
     func testAddDuplicateTriggerWordCaseInsensitive() {
         // 英文触发词重复检查应该不区分大小写
-        settingsManager.addTriggerWord("OK")
+        _ = settingsManager.addTriggerWord("OK")
         let result = settingsManager.addTriggerWord("ok")
 
         XCTAssertFalse(result)
@@ -135,7 +135,7 @@ final class SettingsManagerTests: XCTestCase {
 
     func testCannotRemoveLastTriggerWord() {
         // 不能删除最后一个触发词
-        settingsManager.removeTriggerWord("发送")
+        _ = settingsManager.removeTriggerWord("发送")
 
         // 此时只剩 "Go" 一个触发词
         let result = settingsManager.removeTriggerWord("Go")
@@ -147,8 +147,8 @@ final class SettingsManagerTests: XCTestCase {
 
     func testTriggerWordsPersist() {
         // 触发词应该持久化
-        settingsManager.addTriggerWord("OK")
-        settingsManager.removeTriggerWord("发送")
+        _ = settingsManager.addTriggerWord("OK")
+        _ = settingsManager.removeTriggerWord("发送")
 
         // 创建新的 SettingsManager 实例
         let newSettingsManager = SettingsManager(userDefaults: mockUserDefaults)
@@ -163,8 +163,8 @@ final class SettingsManagerTests: XCTestCase {
     func testResetToDefault() {
         // 修改设置
         settingsManager.isEnabled = false
-        settingsManager.addTriggerWord("OK")
-        settingsManager.removeTriggerWord("发送")
+        _ = settingsManager.addTriggerWord("OK")
+        _ = settingsManager.removeTriggerWord("发送")
 
         // 恢复默认
         settingsManager.resetToDefault()

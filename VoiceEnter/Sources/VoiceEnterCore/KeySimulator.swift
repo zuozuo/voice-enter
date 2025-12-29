@@ -16,20 +16,44 @@ class KeySimulator: KeySimulatorProtocol {
 
     /// 模拟按下回车键
     func simulateEnter() -> Bool {
-        // TODO: 实现
-        fatalError("Not implemented")
+        // 先按下，再释放
+        guard eventPoster.postKeyDown(keyCode: Self.enterKeyCode) else {
+            return false
+        }
+        guard eventPoster.postKeyUp(keyCode: Self.enterKeyCode) else {
+            return false
+        }
+        return true
     }
 
     /// 删除指定数量的字符
     func deleteCharacters(count: Int) -> Bool {
-        // TODO: 实现
-        fatalError("Not implemented")
+        // 负数无效
+        guard count >= 0 else { return false }
+
+        // 0 个字符直接成功
+        guard count > 0 else { return true }
+
+        // 按 count 次 delete 键
+        for _ in 0..<count {
+            guard eventPoster.postKeyDown(keyCode: Self.deleteKeyCode) else {
+                return false
+            }
+            guard eventPoster.postKeyUp(keyCode: Self.deleteKeyCode) else {
+                return false
+            }
+        }
+        return true
     }
 
     /// 删除字符后按回车
     func deleteThenEnter(deleteCount: Int) -> Bool {
-        // TODO: 实现
-        fatalError("Not implemented")
+        // 先删除
+        guard deleteCharacters(count: deleteCount) else {
+            return false
+        }
+        // 再回车
+        return simulateEnter()
     }
 }
 
@@ -38,12 +62,18 @@ class KeySimulator: KeySimulatorProtocol {
 /// 真实的事件发送器，使用 CGEvent
 class CGEventPoster: EventPosterProtocol {
     func postKeyDown(keyCode: CGKeyCode) -> Bool {
-        // TODO: 实现
-        fatalError("Not implemented")
+        guard let event = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true) else {
+            return false
+        }
+        event.post(tap: .cghidEventTap)
+        return true
     }
 
     func postKeyUp(keyCode: CGKeyCode) -> Bool {
-        // TODO: 实现
-        fatalError("Not implemented")
+        guard let event = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false) else {
+            return false
+        }
+        event.post(tap: .cghidEventTap)
+        return true
     }
 }

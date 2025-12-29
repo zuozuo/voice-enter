@@ -31,6 +31,7 @@ final class InputMonitorTests: XCTestCase {
         mockSettingsManager.mockTriggerWords = ["发送"]
         mockSettingsManager.mockIsEnabled = true
 
+        inputMonitor.startMonitoring()
         inputMonitor.handleTextInput("你好发送")
 
         // 等待防抖延迟
@@ -49,6 +50,7 @@ final class InputMonitorTests: XCTestCase {
         mockSettingsManager.mockTriggerWords = ["发送"]
         mockSettingsManager.mockIsEnabled = false
 
+        inputMonitor.startMonitoring()
         inputMonitor.handleTextInput("你好发送")
 
         let expectation = XCTestExpectation(description: "Debounce")
@@ -65,6 +67,7 @@ final class InputMonitorTests: XCTestCase {
         mockSettingsManager.mockTriggerWords = ["发送"]
         mockSettingsManager.mockIsEnabled = true
 
+        inputMonitor.startMonitoring()
         inputMonitor.handleTextInput("你好世界")
 
         let expectation = XCTestExpectation(description: "Debounce")
@@ -83,6 +86,7 @@ final class InputMonitorTests: XCTestCase {
         mockSettingsManager.mockTriggerWords = ["发送"]
         mockSettingsManager.mockIsEnabled = true
 
+        inputMonitor.startMonitoring()
         // 第一次输入
         inputMonitor.handleTextInput("你好发送")
 
@@ -107,6 +111,7 @@ final class InputMonitorTests: XCTestCase {
         mockSettingsManager.mockTriggerWords = ["Go"]
         mockSettingsManager.mockIsEnabled = true
 
+        inputMonitor.startMonitoring()
         inputMonitor.handleTextInput("hello Go")
 
         // 等待防抖延迟（默认 300ms）+ 一点余量
@@ -126,6 +131,7 @@ final class InputMonitorTests: XCTestCase {
         mockSettingsManager.mockTriggerWords = ["发送"]
         mockSettingsManager.mockIsEnabled = true
 
+        inputMonitor.startMonitoring()
         inputMonitor.handleTextInput("你好发送")
 
         let expectation = XCTestExpectation(description: "Debounce")
@@ -142,6 +148,7 @@ final class InputMonitorTests: XCTestCase {
         mockSettingsManager.mockTriggerWords = ["Go"]
         mockSettingsManager.mockIsEnabled = true
 
+        inputMonitor.startMonitoring()
         inputMonitor.handleTextInput("hello Go")
 
         let expectation = XCTestExpectation(description: "Debounce")
@@ -158,6 +165,7 @@ final class InputMonitorTests: XCTestCase {
         mockSettingsManager.mockTriggerWords = ["发送"]
         mockSettingsManager.mockIsEnabled = true
 
+        inputMonitor.startMonitoring()
         inputMonitor.handleTextInput("你好发送  ")
 
         let expectation = XCTestExpectation(description: "Debounce")
