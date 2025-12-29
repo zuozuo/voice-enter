@@ -6,9 +6,11 @@ import AppKit
 /// 通用输入监听器 - 同时使用多种监听方式，覆盖不同场景
 /// - TextMonitor: 使用 Accessibility API，用于普通应用（Notes, Safari, 浏览器等）
 /// - KittyTerminalMonitor: 使用 kitty 远程控制 API，用于 kitty 终端
+/// - TerminalAppMonitor: 使用 AppleScript，用于 macOS 原生 Terminal.app
 public class UniversalInputMonitor {
     private let textMonitor: TextMonitor
     private let kittyMonitor: KittyTerminalMonitor
+    private let terminalMonitor: TerminalAppMonitor
     private let settingsManager: SettingsManager
 
     /// 触发回调
@@ -16,6 +18,7 @@ public class UniversalInputMonitor {
         didSet {
             textMonitor.onTrigger = onTrigger
             kittyMonitor.onTrigger = onTrigger
+            terminalMonitor.onTrigger = onTrigger
         }
     }
 
@@ -29,6 +32,7 @@ public class UniversalInputMonitor {
         self.settingsManager = SettingsManager()
         self.textMonitor = TextMonitor()
         self.kittyMonitor = KittyTerminalMonitor()
+        self.terminalMonitor = TerminalAppMonitor()
     }
 
     /// 开始监听
@@ -53,8 +57,16 @@ public class UniversalInputMonitor {
             voiceLog("[UniversalMonitor] KittyTerminalMonitor 启动失败（kitty 可能未运行或远程控制未启用）")
         }
 
+        // 启动 TerminalAppMonitor
+        let terminalStarted = terminalMonitor.startMonitoring()
+        if terminalStarted {
+            voiceLog("[UniversalMonitor] TerminalAppMonitor 启动成功")
+        } else {
+            voiceLog("[UniversalMonitor] TerminalAppMonitor 启动失败（Terminal.app 可能未运行）")
+        }
+
         // 只要有一个成功就算成功
-        isMonitoring = textStarted || kittyStarted
+        isMonitoring = textStarted || kittyStarted || terminalStarted
 
         if isMonitoring {
             voiceLog("[UniversalMonitor] 通用输入监听器已启动")
@@ -72,6 +84,7 @@ public class UniversalInputMonitor {
 
         textMonitor.stopMonitoring()
         kittyMonitor.stopMonitoring()
+        terminalMonitor.stopMonitoring()
 
         isMonitoring = false
         onStatusChange?(false)
