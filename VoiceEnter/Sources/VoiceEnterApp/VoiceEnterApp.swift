@@ -217,40 +217,264 @@ class AppState: ObservableObject {
     }
 }
 
+// MARK: - Design System
+
+private enum DesignColors {
+    static let cardBackground = Color(white: 0.12)
+    static let surfaceBackground = Color(white: 0.08)
+    static let accentGradient = LinearGradient(
+        colors: [Color(red: 0.2, green: 0.8, blue: 0.6), Color(red: 0.3, green: 0.6, blue: 0.9)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    static let dangerGradient = LinearGradient(
+        colors: [Color(red: 0.9, green: 0.3, blue: 0.3), Color(red: 0.8, green: 0.2, blue: 0.4)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    static let subtleText = Color(white: 0.5)
+    static let primaryText = Color(white: 0.95)
+    static let secondaryText = Color(white: 0.7)
+    static let activeGreen = Color(red: 0.3, green: 0.85, blue: 0.5)
+    static let warningOrange = Color(red: 0.95, green: 0.6, blue: 0.2)
+    static let inactiveRed = Color(red: 0.85, green: 0.3, blue: 0.35)
+}
+
+// MARK: - Card View Modifier
+
+struct CardStyle: ViewModifier {
+    var padding: CGFloat = 12
+
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(DesignColors.cardBackground)
+                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            )
+    }
+}
+
+extension View {
+    func cardStyle(padding: CGFloat = 12) -> some View {
+        modifier(CardStyle(padding: padding))
+    }
+}
+
+// MARK: - Status Indicator
+
+struct StatusIndicator: View {
+    let isActive: Bool
+    let activeText: String
+    let inactiveText: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(isActive ? DesignColors.activeGreen : DesignColors.inactiveRed)
+                .frame(width: 8, height: 8)
+                .shadow(color: isActive ? DesignColors.activeGreen.opacity(0.6) : .clear, radius: 4)
+            Text(isActive ? activeText : inactiveText)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(DesignColors.secondaryText)
+        }
+    }
+}
+
+// MARK: - Section Header
+
+struct SectionHeader: View {
+    let icon: String
+    let title: String
+    var trailing: AnyView? = nil
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(DesignColors.accentGradient)
+            Text(title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundColor(DesignColors.subtleText)
+                .textCase(.uppercase)
+                .tracking(0.5)
+            Spacer()
+            if let trailing = trailing {
+                trailing
+            }
+        }
+    }
+}
+
+// MARK: - Styled Toggle
+
+struct StyledToggle: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(DesignColors.primaryText)
+        }
+        .toggleStyle(.switch)
+        .tint(DesignColors.activeGreen)
+    }
+}
+
+// MARK: - Trigger Word Tag
+
+struct TriggerWordTag: View {
+    let word: String
+    let onRemove: () -> Void
+    let canRemove: Bool
+
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(word)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundColor(DesignColors.primaryText)
+
+            if canRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(isHovering ? DesignColors.inactiveRed : DesignColors.subtleText)
+                }
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        isHovering = hovering
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        )
+    }
+}
+
+// MARK: - Primary Action Button
+
+struct PrimaryActionButton: View {
+    let title: String
+    let icon: String
+    let isDestructive: Bool
+    let action: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isDestructive ? DesignColors.dangerGradient : DesignColors.accentGradient)
+                    .shadow(color: (isDestructive ? Color.red : Color.teal).opacity(isHovering ? 0.4 : 0.2), radius: isHovering ? 8 : 4, y: 2)
+            )
+            .scaleEffect(isHovering ? 1.02 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isHovering = hovering
+            }
+        }
+    }
+}
+
 // MARK: - MenuBarView
 
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @State private var newTriggerWord: String = ""
     @State private var showingAddField: Bool = false
+    @State private var isHoveringQuit = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 标题和状态
-            HStack {
-                Text("VoiceEnter")
-                    .font(.headline)
-                Spacer()
-                Circle()
-                    .fill(appState.isMonitoring ? Color.green : Color.red)
-                    .frame(width: 8, height: 8)
-                Text(appState.isMonitoring ? "运行中" : "已停止")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 16) {
+                // Header
+                headerSection
+
+                // Main Control Card
+                mainControlCard
+
+                // Trigger Words Card
+                triggerWordsCard
+
+                // Face Expression Card
+                faceExpressionCard
+
+                // Footer
+                footerSection
             }
+            .padding(16)
+        }
+        .frame(width: 300, height: 520)
+        .background(DesignColors.surfaceBackground)
+    }
 
-            Divider()
+    // MARK: - Header Section
 
-            // 开关
-            Toggle("启用触发词检测", isOn: Binding(
-                get: { appState.isEnabled },
-                set: { _ in appState.toggleEnabled() }
-            ))
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("VoiceEnter")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(DesignColors.primaryText)
+                Text("语音触发助手")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(DesignColors.subtleText)
+            }
+            Spacer()
+            StatusIndicator(
+                isActive: appState.isMonitoring,
+                activeText: "运行中",
+                inactiveText: "已停止"
+            )
+        }
+    }
 
-            // 触发范围选择
+    // MARK: - Main Control Card
+
+    private var mainControlCard: some View {
+        VStack(spacing: 12) {
+            SectionHeader(icon: "slider.horizontal.3", title: "控制")
+
+            StyledToggle(
+                title: "启用触发词检测",
+                isOn: Binding(
+                    get: { appState.isEnabled },
+                    set: { _ in appState.toggleEnabled() }
+                )
+            )
+
+            // Trigger Scope Picker
             HStack {
-                Text("触发范围:")
-                    .font(.caption)
+                Text("触发范围")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(DesignColors.primaryText)
                 Spacer()
                 Picker("", selection: Binding(
                     get: { appState.triggerScope },
@@ -262,110 +486,285 @@ struct MenuBarView: View {
                 }
                 .pickerStyle(.menu)
                 .frame(width: 100)
+                .tint(DesignColors.activeGreen)
             }
 
-            // 启动/停止按钮
-            Button(action: { appState.toggleMonitoring() }) {
-                HStack {
-                    Image(systemName: appState.isMonitoring ? "stop.fill" : "play.fill")
-                    Text(appState.isMonitoring ? "停止监听" : "开始监听")
+            PrimaryActionButton(
+                title: appState.isMonitoring ? "停止监听" : "开始监听",
+                icon: appState.isMonitoring ? "stop.fill" : "play.fill",
+                isDestructive: appState.isMonitoring,
+                action: { appState.toggleMonitoring() }
+            )
+
+            // Permission Warning
+            if !appState.checkAccessibilityPermission() {
+                Button(action: { appState.requestAccessibilityPermission() }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.shield.fill")
+                            .foregroundColor(DesignColors.warningOrange)
+                        Text("需要辅助功能权限")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(DesignColors.warningOrange)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(DesignColors.warningOrange.opacity(0.15))
+                    )
                 }
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(appState.isMonitoring ? .red : .green)
 
-            Divider()
-
-            // 触发词列表
-            Text("触发词")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            ForEach(appState.triggerWords, id: \.self) { word in
+            // Last Triggered
+            if !appState.lastTriggered.isEmpty {
                 HStack {
-                    Text(word)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(DesignColors.activeGreen)
+                    Text("最近触发:")
+                        .font(.system(size: 11))
+                        .foregroundColor(DesignColors.subtleText)
+                    Text(appState.lastTriggered)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(DesignColors.activeGreen)
                     Spacer()
-                    Button(action: {
-                        _ = appState.removeTriggerWord(word)
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                }
+            }
+        }
+        .cardStyle()
+    }
+
+    // MARK: - Trigger Words Card
+
+    private var triggerWordsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(
+                icon: "text.bubble.fill",
+                title: "触发词",
+                trailing: AnyView(
+                    Text("\(appState.triggerWords.count)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(DesignColors.subtleText)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule().fill(Color.white.opacity(0.1))
+                        )
+                )
+            )
+
+            // Words Flow Layout
+            FlowLayout(spacing: 8) {
+                ForEach(appState.triggerWords, id: \.self) { word in
+                    TriggerWordTag(
+                        word: word,
+                        onRemove: { _ = appState.removeTriggerWord(word) },
+                        canRemove: appState.triggerWords.count > 1
+                    )
+                }
+            }
+
+            // Add New Word
+            if showingAddField {
+                HStack(spacing: 8) {
+                    TextField("输入触发词", text: $newTriggerWord)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(DesignColors.primaryText)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(DesignColors.activeGreen.opacity(0.5), lineWidth: 1)
+                                )
+                        )
+                        .onSubmit { addTriggerWord() }
+
+                    Button(action: { addTriggerWord() }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(DesignColors.accentGradient)
                     }
                     .buttonStyle(.plain)
-                    .disabled(appState.triggerWords.count <= 1)
-                }
-                .padding(.vertical, 2)
-            }
-
-            // 添加触发词
-            if showingAddField {
-                HStack {
-                    TextField("新触发词", text: $newTriggerWord)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit {
-                            addTriggerWord()
-                        }
-                    Button("添加") {
-                        addTriggerWord()
-                    }
                     .disabled(newTriggerWord.isEmpty)
+                    .opacity(newTriggerWord.isEmpty ? 0.4 : 1)
+
+                    Button(action: { showingAddField = false }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(DesignColors.subtleText)
+                    }
+                    .buttonStyle(.plain)
                 }
             } else {
                 Button(action: { showingAddField = true }) {
-                    HStack {
+                    HStack(spacing: 6) {
                         Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .semibold))
                         Text("添加触发词")
+                            .font(.system(size: 12, weight: .medium))
                     }
+                    .foregroundStyle(DesignColors.accentGradient)
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(.blue)
             }
+        }
+        .cardStyle()
+    }
 
-            Divider()
+    // MARK: - Face Expression Card
 
-            // 最近触发
-            if !appState.lastTriggered.isEmpty {
-                HStack {
-                    Text("最近触发:")
-                        .foregroundColor(.secondary)
-                    Text(appState.lastTriggered)
-                        .foregroundColor(.green)
-                }
-                .font(.caption)
-            }
+    private var faceExpressionCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(
+                icon: "face.smiling.inverse",
+                title: "表情触发",
+                trailing: appState.isFaceExpressionEnabled ? AnyView(
+                    Circle()
+                        .fill(appState.hasFaceDetected ? DesignColors.activeGreen : DesignColors.warningOrange)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: appState.hasFaceDetected ? DesignColors.activeGreen.opacity(0.5) : .clear, radius: 3)
+                ) : nil
+            )
 
-            // 权限按钮
-            if !appState.checkAccessibilityPermission() {
-                Button(action: { appState.requestAccessibilityPermission() }) {
-                    HStack {
-                        Image(systemName: "lock.shield")
-                        Text("授予辅助功能权限")
+            StyledToggle(
+                title: "启用表情触发",
+                isOn: Binding(
+                    get: { appState.isFaceExpressionEnabled },
+                    set: { _ in appState.toggleFaceExpression() }
+                )
+            )
+
+            if appState.isFaceExpressionEnabled {
+                if !appState.checkCameraPermission() {
+                    Button(action: { appState.requestCameraPermission() }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "camera.fill")
+                                .foregroundColor(DesignColors.warningOrange)
+                            Text("需要摄像头权限")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(DesignColors.warningOrange)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(DesignColors.warningOrange.opacity(0.15))
+                        )
                     }
-                    .frame(maxWidth: .infinity)
+                    .buttonStyle(.plain)
+                } else {
+                    VStack(spacing: 10) {
+                        // Expression Picker
+                        HStack {
+                            Text("触发表情")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(DesignColors.secondaryText)
+                            Spacer()
+                            Picker("", selection: Binding(
+                                get: { appState.selectedExpression },
+                                set: { appState.setSelectedExpression($0) }
+                            )) {
+                                ForEach(ExpressionType.allCases, id: \.self) { type in
+                                    Text(type.rawValue).tag(type)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 90)
+                            .tint(DesignColors.activeGreen)
+                        }
+
+                        // Sensitivity Slider
+                        VStack(spacing: 4) {
+                            HStack {
+                                Text("灵敏度")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(DesignColors.secondaryText)
+                                Spacer()
+                                Text("\(Int((1 - appState.expressionThreshold) * 100))%")
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .foregroundColor(DesignColors.activeGreen)
+                            }
+                            Slider(
+                                value: Binding(
+                                    get: { appState.expressionThreshold },
+                                    set: { appState.setExpressionThreshold($0) }
+                                ),
+                                in: 0.2...0.8
+                            )
+                            .tint(DesignColors.activeGreen)
+                        }
+
+                        // Detection Value
+                        VStack(spacing: 4) {
+                            HStack {
+                                Text("检测值")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(DesignColors.secondaryText)
+                                Spacer()
+                                Text(appState.hasFaceDetected ? "\(Int(appState.currentExpressionValue * 100))%" : "无人脸")
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .foregroundColor(appState.currentExpressionValue > appState.expressionThreshold ? DesignColors.activeGreen : DesignColors.subtleText)
+                            }
+                            GeometryReader { geometry in
+                                ZStack(alignment: .leading) {
+                                    // Background
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(Color.white.opacity(0.1))
+                                        .frame(height: 6)
+
+                                    // Value Bar
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(
+                                            appState.currentExpressionValue > appState.expressionThreshold ?
+                                            DesignColors.accentGradient :
+                                            LinearGradient(colors: [DesignColors.subtleText], startPoint: .leading, endPoint: .trailing)
+                                        )
+                                        .frame(width: geometry.size.width * CGFloat(appState.currentExpressionValue), height: 6)
+
+                                    // Threshold Marker
+                                    Rectangle()
+                                        .fill(DesignColors.warningOrange)
+                                        .frame(width: 2, height: 10)
+                                        .offset(x: geometry.size.width * CGFloat(appState.expressionThreshold) - 1)
+                                }
+                            }
+                            .frame(height: 10)
+                        }
+                    }
                 }
-                .buttonStyle(.bordered)
             }
+        }
+        .cardStyle()
+    }
 
-            Divider()
+    // MARK: - Footer Section
 
-            // 面部表情触发
-            FaceExpressionSection()
-
-            Divider()
-
-            // 退出按钮
+    private var footerSection: some View {
+        HStack {
+            Spacer()
             Button(action: { NSApp.terminate(nil) }) {
-                HStack {
+                HStack(spacing: 4) {
                     Image(systemName: "power")
+                        .font(.system(size: 10, weight: .semibold))
                     Text("退出")
+                        .font(.system(size: 11, weight: .medium))
                 }
+                .foregroundColor(isHoveringQuit ? DesignColors.inactiveRed : DesignColors.subtleText)
             }
             .buttonStyle(.plain)
-            .foregroundColor(.red)
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isHoveringQuit = hovering
+                }
+            }
+            Spacer()
         }
-        .padding()
-        .frame(width: 260)
+        .padding(.top, 4)
     }
 
     private func addTriggerWord() {
@@ -376,95 +775,55 @@ struct MenuBarView: View {
     }
 }
 
-// MARK: - FaceExpressionSection
+// MARK: - Flow Layout
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = layout(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = layout(proposal: proposal, subviews: subviews)
+        for (index, subview) in subviews.enumerated() {
+            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x, y: bounds.minY + result.positions[index].y), proposal: .unspecified)
+        }
+    }
+
+    private func layout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        let maxWidth = proposal.width ?? .infinity
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if currentX + size.width > maxWidth && currentX > 0 {
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+
+            positions.append(CGPoint(x: currentX, y: currentY))
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+        }
+
+        return (CGSize(width: maxWidth, height: currentY + lineHeight), positions)
+    }
+}
+
+// MARK: - FaceExpressionSection (Legacy - keeping for compatibility)
 
 struct FaceExpressionSection: View {
     @EnvironmentObject var appState: AppState
-    @State private var showingExpressionPicker = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 标题
-            HStack {
-                Image(systemName: "face.smiling")
-                Text("表情触发")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                Spacer()
-                if appState.isFaceExpressionEnabled {
-                    Circle()
-                        .fill(appState.hasFaceDetected ? Color.green : Color.orange)
-                        .frame(width: 6, height: 6)
-                }
-            }
-
-            // 开关
-            Toggle("启用表情触发", isOn: Binding(
-                get: { appState.isFaceExpressionEnabled },
-                set: { _ in appState.toggleFaceExpression() }
-            ))
-            .toggleStyle(.switch)
-
-            if appState.isFaceExpressionEnabled {
-                // 摄像头权限
-                if !appState.checkCameraPermission() {
-                    Button(action: { appState.requestCameraPermission() }) {
-                        HStack {
-                            Image(systemName: "camera")
-                            Text("授予摄像头权限")
-                        }
-                        .font(.caption)
-                    }
-                    .buttonStyle(.bordered)
-                } else {
-                    // 表情选择
-                    HStack {
-                        Text("触发表情:")
-                            .font(.caption)
-                        Spacer()
-                        Picker("", selection: Binding(
-                            get: { appState.selectedExpression },
-                            set: { appState.setSelectedExpression($0) }
-                        )) {
-                            ForEach(ExpressionType.allCases, id: \.self) { type in
-                                Text(type.rawValue).tag(type)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 100)
-                    }
-
-                    // 灵敏度
-                    HStack {
-                        Text("灵敏度:")
-                            .font(.caption)
-                        Slider(
-                            value: Binding(
-                                get: { appState.expressionThreshold },
-                                set: { appState.setExpressionThreshold($0) }
-                            ),
-                            in: 0.2...0.8
-                        )
-                        Text("\(Int((1 - appState.expressionThreshold) * 100))%")
-                            .font(.caption)
-                            .frame(width: 35)
-                    }
-
-                    // 实时检测值
-                    HStack {
-                        Text("检测值:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        ProgressView(value: Double(appState.currentExpressionValue))
-                            .progressViewStyle(.linear)
-                        Text(appState.hasFaceDetected ? "\(Int(appState.currentExpressionValue * 100))%" : "无人脸")
-                            .font(.caption)
-                            .foregroundColor(appState.currentExpressionValue > appState.expressionThreshold ? .green : .secondary)
-                            .frame(width: 45)
-                    }
-                }
-            }
-        }
+        EmptyView()
     }
 }
 
