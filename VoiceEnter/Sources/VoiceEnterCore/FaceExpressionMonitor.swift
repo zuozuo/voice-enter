@@ -420,6 +420,20 @@ public class FaceExpressionMonitor: NSObject {
         return Float(normalized)
     }
 
+    /// 播放触发音效
+    private func playTriggerSound() {
+        // 使用 macOS 系统音效 "Tink" - 简短清脆的提示音
+        // 其他可选音效: "Pop", "Ping", "Glass", "Blow", "Bottle", "Frog", "Funk", "Morse", "Purr", "Sosumi", "Submarine", "Hero"
+        if let sound = NSSound(named: "Tink") {
+            sound.play()
+            voiceLog("[FaceMonitor] 播放触发音效")
+        } else {
+            // 备用：使用系统警告音
+            NSSound.beep()
+            voiceLog("[FaceMonitor] 播放系统提示音")
+        }
+    }
+
     private func handleExpressionState(_ state: ExpressionState) {
         lastExpressionState = state
         onExpressionChange?(state)
@@ -461,6 +475,9 @@ public class FaceExpressionMonitor: NSObject {
         expressionStartTime = nil
 
         voiceLog("[FaceMonitor] ✅ 检测到 \(triggerExpression.rawValue)，系数: \(coefficient)，触发回车")
+
+        // 播放触发音效
+        playTriggerSound()
 
         // 模拟按下回车键
         let success = keySimulator.simulateEnter()
