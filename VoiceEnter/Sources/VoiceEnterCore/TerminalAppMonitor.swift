@@ -108,6 +108,9 @@ public class TerminalAppMonitor {
 
         guard settingsManager.isEnabled else { return }
 
+        // 检查触发范围：TerminalAppMonitor 在 terminalsOnly 和 allApps 模式下工作
+        guard settingsManager.triggerScope != .kittyOnly else { return }
+
         // 只有当 Terminal 是前台应用时才监听
         guard isTerminalFrontmost() else {
             return

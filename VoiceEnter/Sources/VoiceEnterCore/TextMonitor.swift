@@ -120,10 +120,13 @@ public class TextMonitor {
     private func pollFocusedText() {
         pollCount += 1
         if pollCount % 25 == 0 {  // 每5秒打印一次心跳
-            voiceLog("[TextMonitor] 心跳 #\(pollCount), isEnabled=\(settingsManager.isEnabled)")
+            voiceLog("[TextMonitor] 心跳 #\(pollCount), isEnabled=\(settingsManager.isEnabled), scope=\(settingsManager.triggerScope.displayName)")
         }
 
         guard settingsManager.isEnabled else { return }
+
+        // 检查触发范围：TextMonitor 只在 allApps 模式下工作
+        guard settingsManager.triggerScope == .allApps else { return }
 
         // 获取当前焦点元素的文本
         let (text, debugInfo) = getFocusedElementTextWithDebug()

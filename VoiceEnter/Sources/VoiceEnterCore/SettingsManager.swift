@@ -1,5 +1,30 @@
 import Foundation
 
+// MARK: - TriggerScope
+
+/// 触发范围 - 控制触发词在哪些应用中生效
+public enum TriggerScope: Int, CaseIterable, Codable {
+    case kittyOnly = 0      // 仅 kitty 终端
+    case terminalsOnly = 1  // 仅终端类应用（kitty + Terminal.app）
+    case allApps = 2        // 所有应用
+
+    public var displayName: String {
+        switch self {
+        case .kittyOnly: return "仅 Kitty"
+        case .terminalsOnly: return "仅终端"
+        case .allApps: return "所有应用"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .kittyOnly: return "只在 Kitty 终端中触发"
+        case .terminalsOnly: return "在 Kitty 和 Terminal.app 中触发"
+        case .allApps: return "在所有应用中触发（包括浏览器、备忘录等）"
+        }
+    }
+}
+
 // MARK: - SettingsManager
 
 /// 设置管理器 - 管理应用设置的持久化
@@ -10,6 +35,7 @@ public class SettingsManager: SettingsManagerProtocol {
     private enum Keys {
         static let enabled = "voiceenter.enabled"
         static let triggerWords = "voiceenter.triggerWords"
+        static let triggerScope = "voiceenter.triggerScope"
     }
 
     private static let defaultTriggerWords = ["发送", "Go"]
@@ -38,6 +64,17 @@ public class SettingsManager: SettingsManagerProtocol {
             return words
         }
         return Self.defaultTriggerWords
+    }
+
+    public var triggerScope: TriggerScope {
+        get {
+            let rawValue = userDefaults.integer(forKey: Keys.triggerScope)
+            return TriggerScope(rawValue: rawValue) ?? .kittyOnly
+        }
+        set {
+            userDefaults.set(newValue.rawValue, forKey: Keys.triggerScope)
+            notifyCallbacks()
+        }
     }
 
     @discardableResult

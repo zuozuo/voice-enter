@@ -80,6 +80,9 @@ class AppState: ObservableObject {
     @Published var triggerWords: [String] = []
     @Published var lastTriggered: String = ""
 
+    // 触发范围设置
+    @Published var triggerScope: TriggerScope = .kittyOnly
+
     // 面部表情触发相关
     @Published var isFaceExpressionEnabled: Bool = false
     @Published var selectedExpression: ExpressionType = .mouthOpen
@@ -99,6 +102,7 @@ class AppState: ObservableObject {
         // 同步设置
         self.isEnabled = settingsManager.isEnabled
         self.triggerWords = settingsManager.triggerWords
+        self.triggerScope = settingsManager.triggerScope
 
         // 监听触发事件
         inputMonitor.onTrigger = { [weak self] word in
@@ -204,6 +208,13 @@ class AppState: ObservableObject {
             }
         }
     }
+
+    // MARK: - 触发范围设置
+
+    func setTriggerScope(_ scope: TriggerScope) {
+        triggerScope = scope
+        settingsManager.triggerScope = scope
+    }
 }
 
 // MARK: - MenuBarView
@@ -235,6 +246,23 @@ struct MenuBarView: View {
                 get: { appState.isEnabled },
                 set: { _ in appState.toggleEnabled() }
             ))
+
+            // 触发范围选择
+            HStack {
+                Text("触发范围:")
+                    .font(.caption)
+                Spacer()
+                Picker("", selection: Binding(
+                    get: { appState.triggerScope },
+                    set: { appState.setTriggerScope($0) }
+                )) {
+                    ForEach(TriggerScope.allCases, id: \.self) { scope in
+                        Text(scope.displayName).tag(scope)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 100)
+            }
 
             // 启动/停止按钮
             Button(action: { appState.toggleMonitoring() }) {
@@ -452,6 +480,19 @@ struct SettingsView: View {
                     get: { appState.isEnabled },
                     set: { _ in appState.toggleEnabled() }
                 ))
+
+                Picker("触发范围", selection: Binding(
+                    get: { appState.triggerScope },
+                    set: { appState.setTriggerScope($0) }
+                )) {
+                    ForEach(TriggerScope.allCases, id: \.self) { scope in
+                        Text(scope.displayName).tag(scope)
+                    }
+                }
+
+                Text(appState.triggerScope.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
 
             Section("触发词") {
