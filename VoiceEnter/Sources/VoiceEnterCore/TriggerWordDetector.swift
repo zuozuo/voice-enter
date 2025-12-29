@@ -21,6 +21,12 @@ public class TriggerWordDetector {
         self.triggerWords = triggerWords
     }
 
+    /// 需要去除的尾部标点符号（语音输入常自动添加）
+    private static let trailingPunctuation: Set<Character> = [
+        "。", ".", "！", "!", "？", "?", "，", ",", "；", ";", "：", ":",
+        "、", "…", "~", "～"
+    ]
+
     /// 检测输入文本是否以触发词结尾
     /// - Parameter text: 输入文本
     /// - Returns: 如果检测到触发词，返回检测结果；否则返回 nil
@@ -28,9 +34,10 @@ public class TriggerWordDetector {
         // 空输入不触发
         guard !text.isEmpty else { return nil }
 
-        // 只去除尾部空白字符（保留开头空白）
+        // 去除尾部空白字符和标点符号（语音输入常自动添加标点）
         var trimmedText = text
-        while let last = trimmedText.last, last.isWhitespace || last.isNewline {
+        while let last = trimmedText.last,
+              last.isWhitespace || last.isNewline || Self.trailingPunctuation.contains(last) {
             trimmedText.removeLast()
         }
 

@@ -47,7 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 检查权限并自动启动
-        if appState.systemMonitor.checkAccessibilityPermission() {
+        if appState.inputMonitor.checkAccessibilityPermission() {
             _ = appState.startMonitoring()
         }
     }
@@ -80,13 +80,13 @@ class AppState: ObservableObject {
     @Published var triggerWords: [String] = []
     @Published var lastTriggered: String = ""
 
-    let systemMonitor: SystemInputMonitor
+    let inputMonitor: KittyTerminalMonitor
     let settingsManager: SettingsManager
 
     var onStatusChange: ((Bool) -> Void)?
 
     init() {
-        self.systemMonitor = SystemInputMonitor()
+        self.inputMonitor = KittyTerminalMonitor()
         self.settingsManager = SettingsManager()
 
         // 同步设置
@@ -94,13 +94,13 @@ class AppState: ObservableObject {
         self.triggerWords = settingsManager.triggerWords
 
         // 监听触发事件
-        systemMonitor.onTrigger = { [weak self] word in
+        inputMonitor.onTrigger = { [weak self] word in
             DispatchQueue.main.async {
                 self?.lastTriggered = word
             }
         }
 
-        systemMonitor.onStatusChange = { [weak self] isMonitoring in
+        inputMonitor.onStatusChange = { [weak self] isMonitoring in
             DispatchQueue.main.async {
                 self?.isMonitoring = isMonitoring
                 self?.onStatusChange?(isMonitoring)
@@ -109,13 +109,13 @@ class AppState: ObservableObject {
     }
 
     func startMonitoring() -> Bool {
-        let result = systemMonitor.startMonitoring()
+        let result = inputMonitor.startMonitoring()
         isMonitoring = result
         return result
     }
 
     func stopMonitoring() {
-        systemMonitor.stopMonitoring()
+        inputMonitor.stopMonitoring()
         isMonitoring = false
     }
 
@@ -149,11 +149,11 @@ class AppState: ObservableObject {
     }
 
     func requestAccessibilityPermission() {
-        systemMonitor.requestAccessibilityPermission()
+        inputMonitor.requestAccessibilityPermission()
     }
 
     func checkAccessibilityPermission() -> Bool {
-        systemMonitor.checkAccessibilityPermission()
+        inputMonitor.checkAccessibilityPermission()
     }
 }
 
