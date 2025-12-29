@@ -35,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 创建 Popover
         popover = NSPopover()
-        popover?.contentSize = NSSize(width: 280, height: 320)
+        popover?.contentSize = NSSize(width: 280, height: 480)
         popover?.behavior = .transient
         popover?.contentViewController = NSHostingController(
             rootView: MenuBarView().environmentObject(appState)
@@ -80,6 +80,13 @@ class AppState: ObservableObject {
     @Published var triggerWords: [String] = []
     @Published var lastTriggered: String = ""
 
+    // 面部表情触发相关
+    @Published var isFaceExpressionEnabled: Bool = false
+    @Published var selectedExpression: ExpressionType = .mouthOpen
+    @Published var expressionThreshold: Float = 0.4
+    @Published var hasFaceDetected: Bool = false
+    @Published var currentExpressionValue: Float = 0
+
     let inputMonitor: UniversalInputMonitor
     let settingsManager: SettingsManager
 
@@ -104,6 +111,16 @@ class AppState: ObservableObject {
             DispatchQueue.main.async {
                 self?.isMonitoring = isMonitoring
                 self?.onStatusChange?(isMonitoring)
+            }
+        }
+
+        // 监听表情变化
+        inputMonitor.onExpressionChange = { [weak self] state in
+            DispatchQueue.main.async {
+                self?.hasFaceDetected = state.hasFace
+                if let expression = self?.selectedExpression {
+                    self?.currentExpressionValue = state.coefficients[expression] ?? 0
+                }
             }
         }
     }
@@ -154,6 +171,38 @@ class AppState: ObservableObject {
 
     func checkAccessibilityPermission() -> Bool {
         inputMonitor.checkAccessibilityPermission()
+    }
+
+    // MARK: - 面部表情触发
+
+    func toggleFaceExpression() {
+        isFaceExpressionEnabled.toggle()
+        inputMonitor.faceMonitor.isExpressionTriggerEnabled = isFaceExpressionEnabled
+    }
+
+    func setSelectedExpression(_ expression: ExpressionType) {
+        selectedExpression = expression
+        inputMonitor.faceMonitor.triggerExpression = expression
+        expressionThreshold = expression.defaultThreshold
+        inputMonitor.faceMonitor.threshold = expressionThreshold
+    }
+
+    func setExpressionThreshold(_ threshold: Float) {
+        expressionThreshold = threshold
+        inputMonitor.faceMonitor.threshold = threshold
+    }
+
+    func checkCameraPermission() -> Bool {
+        inputMonitor.faceMonitor.checkCameraPermission()
+    }
+
+    func requestCameraPermission() {
+        inputMonitor.faceMonitor.requestCameraPermission { [weak self] granted in
+            if granted {
+                // 重新启动监听以启用摄像头
+                self?.inputMonitor.faceMonitor.startMonitoring()
+            }
+        }
     }
 }
 
@@ -272,6 +321,11 @@ struct MenuBarView: View {
 
             Divider()
 
+            // 面部表情触发
+            FaceExpressionSection()
+
+            Divider()
+
             // 退出按钮
             Button(action: { NSApp.terminate(nil) }) {
                 HStack {
@@ -290,6 +344,98 @@ struct MenuBarView: View {
         if appState.addTriggerWord(newTriggerWord) {
             newTriggerWord = ""
             showingAddField = false
+        }
+    }
+}
+
+// MARK: - FaceExpressionSection
+
+struct FaceExpressionSection: View {
+    @EnvironmentObject var appState: AppState
+    @State private var showingExpressionPicker = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // 标题
+            HStack {
+                Image(systemName: "face.smiling")
+                Text("表情触发")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if appState.isFaceExpressionEnabled {
+                    Circle()
+                        .fill(appState.hasFaceDetected ? Color.green : Color.orange)
+                        .frame(width: 6, height: 6)
+                }
+            }
+
+            // 开关
+            Toggle("启用表情触发", isOn: Binding(
+                get: { appState.isFaceExpressionEnabled },
+                set: { _ in appState.toggleFaceExpression() }
+            ))
+            .toggleStyle(.switch)
+
+            if appState.isFaceExpressionEnabled {
+                // 摄像头权限
+                if !appState.checkCameraPermission() {
+                    Button(action: { appState.requestCameraPermission() }) {
+                        HStack {
+                            Image(systemName: "camera")
+                            Text("授予摄像头权限")
+                        }
+                        .font(.caption)
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    // 表情选择
+                    HStack {
+                        Text("触发表情:")
+                            .font(.caption)
+                        Spacer()
+                        Picker("", selection: Binding(
+                            get: { appState.selectedExpression },
+                            set: { appState.setSelectedExpression($0) }
+                        )) {
+                            ForEach(ExpressionType.allCases, id: \.self) { type in
+                                Text(type.rawValue).tag(type)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 100)
+                    }
+
+                    // 灵敏度
+                    HStack {
+                        Text("灵敏度:")
+                            .font(.caption)
+                        Slider(
+                            value: Binding(
+                                get: { appState.expressionThreshold },
+                                set: { appState.setExpressionThreshold($0) }
+                            ),
+                            in: 0.2...0.8
+                        )
+                        Text("\(Int((1 - appState.expressionThreshold) * 100))%")
+                            .font(.caption)
+                            .frame(width: 35)
+                    }
+
+                    // 实时检测值
+                    HStack {
+                        Text("检测值:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        ProgressView(value: Double(appState.currentExpressionValue))
+                            .progressViewStyle(.linear)
+                        Text(appState.hasFaceDetected ? "\(Int(appState.currentExpressionValue * 100))%" : "无人脸")
+                            .font(.caption)
+                            .foregroundColor(appState.currentExpressionValue > appState.expressionThreshold ? .green : .secondary)
+                            .frame(width: 45)
+                    }
+                }
+            }
         }
     }
 }
@@ -313,8 +459,36 @@ struct SettingsView: View {
                     Text(word)
                 }
             }
+
+            Section("表情触发") {
+                Toggle("启用表情触发", isOn: Binding(
+                    get: { appState.isFaceExpressionEnabled },
+                    set: { _ in appState.toggleFaceExpression() }
+                ))
+
+                Picker("触发表情", selection: Binding(
+                    get: { appState.selectedExpression },
+                    set: { appState.setSelectedExpression($0) }
+                )) {
+                    ForEach(ExpressionType.allCases, id: \.self) { type in
+                        Text(type.rawValue).tag(type)
+                    }
+                }
+
+                HStack {
+                    Text("灵敏度")
+                    Slider(
+                        value: Binding(
+                            get: { appState.expressionThreshold },
+                            set: { appState.setExpressionThreshold($0) }
+                        ),
+                        in: 0.2...0.8
+                    )
+                    Text("\(Int((1 - appState.expressionThreshold) * 100))%")
+                }
+            }
         }
         .padding()
-        .frame(width: 400, height: 300)
+        .frame(width: 400, height: 400)
     }
 }
