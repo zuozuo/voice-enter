@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import VoiceEnterCore
 
 @main
@@ -93,6 +94,9 @@ class AppState: ObservableObject {
     // 主题设置
     @Published var themeMode: ThemeMode = .system
 
+    // 音效设置
+    @Published var triggerSound: TriggerSound = .tink
+
     let inputMonitor: UniversalInputMonitor
     let settingsManager: SettingsManager
 
@@ -106,6 +110,8 @@ class AppState: ObservableObject {
         self.isEnabled = settingsManager.isEnabled
         self.triggerWords = settingsManager.triggerWords
         self.triggerScope = settingsManager.triggerScope
+        self.triggerSound = settingsManager.triggerSound
+        self.inputMonitor.faceMonitor.triggerSound = settingsManager.triggerSound
 
         // 监听触发事件
         inputMonitor.onTrigger = { [weak self] word in
@@ -227,6 +233,20 @@ class AppState: ObservableObject {
 
     func setThemeMode(_ mode: ThemeMode) {
         themeMode = mode
+    }
+
+    // MARK: - 音效设置
+
+    func setTriggerSound(_ sound: TriggerSound) {
+        triggerSound = sound
+        settingsManager.triggerSound = sound
+        inputMonitor.faceMonitor.triggerSound = sound
+    }
+
+    /// 预览音效（点击选择时播放）
+    func previewSound(_ sound: TriggerSound) {
+        guard let soundName = sound.systemName else { return }
+        NSSound(named: soundName)?.play()
     }
 }
 
@@ -652,6 +672,28 @@ struct MenuBarView: View {
                                 }
                             }
                             .frame(height: 10)
+                        }
+
+                        // 触发音效选择
+                        HStack {
+                            Text("触发音效")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(theme.secondaryText)
+                            Spacer()
+                            Picker("", selection: Binding(
+                                get: { appState.triggerSound },
+                                set: { sound in
+                                    appState.setTriggerSound(sound)
+                                    appState.previewSound(sound)
+                                }
+                            )) {
+                                ForEach(TriggerSound.allCases, id: \.self) { sound in
+                                    Text(sound.displayName).tag(sound)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 90)
+                            .tint(theme.accent)
                         }
 
                         // 使用提示

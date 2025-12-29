@@ -1,5 +1,37 @@
 import Foundation
 
+// MARK: - TriggerSound
+
+/// 触发音效 - 触发时播放的系统音效
+public enum TriggerSound: String, CaseIterable, Codable {
+    case none = "无"
+    case tink = "Tink"
+    case pop = "Pop"
+    case ping = "Ping"
+    case glass = "Glass"
+    case blow = "Blow"
+    case bottle = "Bottle"
+    case frog = "Frog"
+    case funk = "Funk"
+    case morse = "Morse"
+    case purr = "Purr"
+    case sosumi = "Sosumi"
+    case submarine = "Submarine"
+    case hero = "Hero"
+
+    public var displayName: String {
+        return rawValue
+    }
+
+    /// 系统音效名称（用于 NSSound）
+    public var systemName: String? {
+        switch self {
+        case .none: return nil
+        default: return rawValue
+        }
+    }
+}
+
 // MARK: - TriggerScope
 
 /// 触发范围 - 控制触发词在哪些应用中生效
@@ -36,6 +68,7 @@ public class SettingsManager: SettingsManagerProtocol {
         static let enabled = "voiceenter.enabled"
         static let triggerWords = "voiceenter.triggerWords"
         static let triggerScope = "voiceenter.triggerScope"
+        static let triggerSound = "voiceenter.triggerSound"
     }
 
     private static let defaultTriggerWords = ["发送", "Go"]
@@ -73,6 +106,20 @@ public class SettingsManager: SettingsManagerProtocol {
         }
         set {
             userDefaults.set(newValue.rawValue, forKey: Keys.triggerScope)
+            notifyCallbacks()
+        }
+    }
+
+    public var triggerSound: TriggerSound {
+        get {
+            if let rawValue = userDefaults.string(forKey: Keys.triggerSound),
+               let sound = TriggerSound(rawValue: rawValue) {
+                return sound
+            }
+            return .tink  // 默认使用 Tink 音效
+        }
+        set {
+            userDefaults.set(newValue.rawValue, forKey: Keys.triggerSound)
             notifyCallbacks()
         }
     }

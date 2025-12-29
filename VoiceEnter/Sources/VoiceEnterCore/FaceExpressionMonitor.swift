@@ -420,17 +420,24 @@ public class FaceExpressionMonitor: NSObject {
         return Float(normalized)
     }
 
+    /// 当前触发音效
+    public var triggerSound: TriggerSound = .tink
+
     /// 播放触发音效
     private func playTriggerSound() {
-        // 使用 macOS 系统音效 "Tink" - 简短清脆的提示音
-        // 其他可选音效: "Pop", "Ping", "Glass", "Blow", "Bottle", "Frog", "Funk", "Morse", "Purr", "Sosumi", "Submarine", "Hero"
-        if let sound = NSSound(named: "Tink") {
+        // 如果音效设置为"无"，则不播放
+        guard let soundName = triggerSound.systemName else {
+            voiceLog("[FaceMonitor] 音效已关闭")
+            return
+        }
+
+        if let sound = NSSound(named: soundName) {
             sound.play()
-            voiceLog("[FaceMonitor] 播放触发音效")
+            voiceLog("[FaceMonitor] 播放触发音效: \(soundName)")
         } else {
             // 备用：使用系统警告音
             NSSound.beep()
-            voiceLog("[FaceMonitor] 播放系统提示音")
+            voiceLog("[FaceMonitor] 播放系统提示音（\(soundName) 不可用）")
         }
     }
 
