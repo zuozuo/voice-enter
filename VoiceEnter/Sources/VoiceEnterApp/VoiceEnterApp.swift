@@ -629,6 +629,17 @@ struct MenuBarView: View {
                             }
                             .frame(height: 10)
                         }
+
+                        // 使用提示
+                        HStack(spacing: 6) {
+                            Image(systemName: "lightbulb.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(theme.warning)
+                            Text(expressionUsageTip)
+                                .font(.system(size: 10))
+                                .foregroundColor(theme.tertiaryText)
+                        }
+                        .padding(.top, 4)
                     }
                 }
             }
@@ -639,6 +650,18 @@ struct MenuBarView: View {
                 .fill(theme.cardBackground)
                 .shadow(color: Color.black.opacity(effectiveColorScheme == .dark ? 0.3 : 0.1), radius: 4, x: 0, y: 2)
         )
+    }
+
+    /// 表情触发使用提示
+    private var expressionUsageTip: String {
+        if !appState.hasFaceDetected {
+            return "请面向摄像头，确保人脸被检测到"
+        } else if appState.currentExpressionValue < appState.expressionThreshold {
+            let expressionName = appState.selectedExpression.rawValue
+            return "做出「\(expressionName)」表情，检测值超过阈值线即触发回车"
+        } else {
+            return "表情已触发！检测值超过阈值时自动发送回车"
+        }
     }
 
     // MARK: - Footer Section
