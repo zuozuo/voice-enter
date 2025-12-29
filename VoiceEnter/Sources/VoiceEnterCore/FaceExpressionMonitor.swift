@@ -254,19 +254,37 @@ public class FaceExpressionMonitor: NSObject {
             return
         }
 
-        // 分析表情
-        let state = analyzeExpression(landmarks: landmarks)
+        // 检查人脸是否正对摄像头（过滤侧脸）
+        // 通过人脸框宽高比来判断：正脸时宽高比接近 1:1.2~1.5
+        // 侧脸时宽度会明显变窄
+        let faceBounds = observation.boundingBox
+        let faceAspectRatio = faceBounds.width / faceBounds.height
+
+        // 如果人脸宽高比小于 0.5，说明是侧脸，跳过检测
+        // 正常正脸的宽高比约为 0.7~1.0
+        if faceAspectRatio < 0.5 {
+            DispatchQueue.main.async { [weak self] in
+                let state = ExpressionState(hasFace: true)  // 有人脸但是侧脸
+                self?.lastExpressionState = state
+                self?.onExpressionChange?(state)
+                self?.expressionStartTime = nil  // 重置计时
+            }
+            return
+        }
+
+        // 分析表情，传入人脸框用于归一化
+        let state = analyzeExpression(landmarks: landmarks, faceBounds: faceBounds)
 
         DispatchQueue.main.async { [weak self] in
             self?.handleExpressionState(state)
         }
     }
 
-    private func analyzeExpression(landmarks: VNFaceLandmarks2D) -> ExpressionState {
+    private func analyzeExpression(landmarks: VNFaceLandmarks2D, faceBounds: CGRect) -> ExpressionState {
         var coefficients: [ExpressionType: Float] = [:]
 
-        // 计算张嘴程度
-        coefficients[.mouthOpen] = calculateMouthOpen(landmarks)
+        // 计算张嘴程度（使用人脸框进行归一化）
+        coefficients[.mouthOpen] = calculateMouthOpen(landmarks, faceBounds: faceBounds)
 
         // 计算眨眼
         coefficients[.leftEyeBlink] = calculateEyeBlink(landmarks.leftEye)
@@ -286,14 +304,13 @@ public class FaceExpressionMonitor: NSObject {
     }
 
     /// 计算张嘴程度 (0.0 ~ 1.0)
-    private func calculateMouthOpen(_ landmarks: VNFaceLandmarks2D) -> Float {
-        guard let innerLips = landmarks.innerLips,
-              let outerLips = landmarks.outerLips else { return 0 }
+    /// 使用人脸高度作为参考进行归一化，避免侧脸时嘴宽度变窄导致误判
+    private func calculateMouthOpen(_ landmarks: VNFaceLandmarks2D, faceBounds: CGRect) -> Float {
+        guard let innerLips = landmarks.innerLips else { return 0 }
 
         let innerPoints = innerLips.normalizedPoints
-        let outerPoints = outerLips.normalizedPoints
 
-        guard innerPoints.count >= 6, outerPoints.count >= 6 else { return 0 }
+        guard innerPoints.count >= 6 else { return 0 }
 
         // 内嘴唇上下距离
         // innerLips 点的顺序：上唇中心 -> 右 -> 下唇中心 -> 左
@@ -301,19 +318,14 @@ public class FaceExpressionMonitor: NSObject {
         let bottomPoint = innerPoints[innerPoints.count / 2]
         let mouthHeight = abs(topPoint.y - bottomPoint.y)
 
-        // 嘴宽度作为参考
-        let leftPoint = outerPoints[outerPoints.count * 3 / 4]
-        let rightPoint = outerPoints[outerPoints.count / 4]
-        let mouthWidth = abs(rightPoint.x - leftPoint.x)
+        // 使用人脸框高度作为参考（更稳定，不受侧脸影响）
+        // 特征点坐标是相对于人脸框的归一化坐标 (0-1)
+        // 所以 mouthHeight 已经是相对于人脸框的比例
 
-        guard mouthWidth > 0 else { return 0 }
-
-        // 高宽比，张嘴时比值变大
-        let ratio = mouthHeight / mouthWidth
-
-        // 正常闭嘴约 0.1，张大嘴约 0.5+
+        // 正常闭嘴时嘴高度约为人脸高度的 0.02-0.04
+        // 张大嘴时约为 0.15-0.25
         // 映射到 0-1 范围
-        let normalized = min(max((ratio - 0.1) / 0.4, 0), 1)
+        let normalized = min(max((mouthHeight - 0.04) / 0.15, 0), 1)
 
         return Float(normalized)
     }
