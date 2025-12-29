@@ -203,6 +203,10 @@ class AppState: ObservableObject {
         inputMonitor.faceMonitor.checkCameraPermission()
     }
 
+    func hasCameraDevice() -> Bool {
+        inputMonitor.faceMonitor.hasCameraDevice()
+    }
+
     func requestCameraPermission() {
         inputMonitor.faceMonitor.requestCameraPermission { [weak self] granted in
             if granted {
@@ -536,7 +540,27 @@ struct MenuBarView: View {
             .tint(theme.success)
 
             if appState.isFaceExpressionEnabled {
-                if !appState.checkCameraPermission() {
+                if !appState.hasCameraDevice() {
+                    // 无摄像头提示
+                    VStack(spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "video.slash.fill")
+                                .foregroundColor(theme.danger)
+                            Text("未检测到摄像头")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(theme.danger)
+                        }
+                        Text("可通过 USB 连接 iPhone 使用「连续互通相机」")
+                            .font(.system(size: 10))
+                            .foregroundColor(theme.tertiaryText)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(theme.danger.opacity(0.15))
+                    )
+                } else if !appState.checkCameraPermission() {
                     // 摄像头权限提示
                     Button(action: { appState.requestCameraPermission() }) {
                         HStack(spacing: 6) {

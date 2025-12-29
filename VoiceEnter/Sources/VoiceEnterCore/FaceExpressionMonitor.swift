@@ -149,6 +149,19 @@ public class FaceExpressionMonitor: NSObject {
         return status == .authorized
     }
 
+    /// 检查是否有摄像头设备
+    public func hasCameraDevice() -> Bool {
+        // 检查前置摄像头
+        if AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) != nil {
+            return true
+        }
+        // 检查任意摄像头
+        if AVCaptureDevice.default(for: .video) != nil {
+            return true
+        }
+        return false
+    }
+
     /// 请求摄像头权限
     public func requestCameraPermission(completion: @escaping (Bool) -> Void) {
         AVCaptureDevice.requestAccess(for: .video) { granted in
