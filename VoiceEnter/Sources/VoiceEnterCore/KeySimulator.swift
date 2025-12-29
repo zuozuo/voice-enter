@@ -4,18 +4,18 @@ import CoreGraphics
 // MARK: - KeySimulator
 
 /// 按键模拟器 - 模拟键盘按键事件
-class KeySimulator: KeySimulatorProtocol {
-    static let enterKeyCode: CGKeyCode = 36
-    static let deleteKeyCode: CGKeyCode = 51
+public class KeySimulator: KeySimulatorProtocol {
+    public static let enterKeyCode: CGKeyCode = 36
+    public static let deleteKeyCode: CGKeyCode = 51
 
     private let eventPoster: EventPosterProtocol
 
-    init(eventPoster: EventPosterProtocol) {
+    public init(eventPoster: EventPosterProtocol) {
         self.eventPoster = eventPoster
     }
 
     /// 模拟按下回车键
-    func simulateEnter() -> Bool {
+    public func simulateEnter() -> Bool {
         // 先按下，再释放
         guard eventPoster.postKeyDown(keyCode: Self.enterKeyCode) else {
             return false
@@ -27,7 +27,7 @@ class KeySimulator: KeySimulatorProtocol {
     }
 
     /// 删除指定数量的字符
-    func deleteCharacters(count: Int) -> Bool {
+    public func deleteCharacters(count: Int) -> Bool {
         // 负数无效
         guard count >= 0 else { return false }
 
@@ -47,7 +47,7 @@ class KeySimulator: KeySimulatorProtocol {
     }
 
     /// 删除字符后按回车
-    func deleteThenEnter(deleteCount: Int) -> Bool {
+    public func deleteThenEnter(deleteCount: Int) -> Bool {
         // 先删除
         guard deleteCharacters(count: deleteCount) else {
             return false
@@ -60,8 +60,10 @@ class KeySimulator: KeySimulatorProtocol {
 // MARK: - CGEventPoster
 
 /// 真实的事件发送器，使用 CGEvent
-class CGEventPoster: EventPosterProtocol {
-    func postKeyDown(keyCode: CGKeyCode) -> Bool {
+public class CGEventPoster: EventPosterProtocol {
+    public init() {}
+
+    public func postKeyDown(keyCode: CGKeyCode) -> Bool {
         guard let event = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true) else {
             return false
         }
@@ -69,7 +71,7 @@ class CGEventPoster: EventPosterProtocol {
         return true
     }
 
-    func postKeyUp(keyCode: CGKeyCode) -> Bool {
+    public func postKeyUp(keyCode: CGKeyCode) -> Bool {
         guard let event = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false) else {
             return false
         }

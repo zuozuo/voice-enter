@@ -3,7 +3,7 @@ import Foundation
 // MARK: - SettingsManager
 
 /// 设置管理器 - 管理应用设置的持久化
-class SettingsManager: SettingsManagerProtocol {
+public class SettingsManager: SettingsManagerProtocol {
     private let userDefaults: UserDefaults
     private var callbacks: [UUID: () -> Void] = [:]
 
@@ -15,11 +15,11 @@ class SettingsManager: SettingsManagerProtocol {
     private static let defaultTriggerWords = ["发送", "Go"]
     private static let maxTriggerWordLength = 10
 
-    init(userDefaults: UserDefaults = .standard) {
+    public init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
     }
 
-    var isEnabled: Bool {
+    public var isEnabled: Bool {
         get {
             // 默认值为 true
             if userDefaults.object(forKey: Keys.enabled) == nil {
@@ -33,7 +33,7 @@ class SettingsManager: SettingsManagerProtocol {
         }
     }
 
-    var triggerWords: [String] {
+    public var triggerWords: [String] {
         if let words = userDefaults.stringArray(forKey: Keys.triggerWords) {
             return words
         }
@@ -41,7 +41,7 @@ class SettingsManager: SettingsManagerProtocol {
     }
 
     @discardableResult
-    func addTriggerWord(_ word: String) -> Bool {
+    public func addTriggerWord(_ word: String) -> Bool {
         // 去除首尾空格
         let trimmedWord = word.trimmingCharacters(in: .whitespaces)
 
@@ -72,7 +72,7 @@ class SettingsManager: SettingsManagerProtocol {
     }
 
     @discardableResult
-    func removeTriggerWord(_ word: String) -> Bool {
+    public func removeTriggerWord(_ word: String) -> Bool {
         var currentWords = triggerWords
 
         // 查找要删除的触发词
@@ -88,13 +88,13 @@ class SettingsManager: SettingsManagerProtocol {
         return true
     }
 
-    func resetToDefault() {
+    public func resetToDefault() {
         userDefaults.removeObject(forKey: Keys.enabled)
         userDefaults.removeObject(forKey: Keys.triggerWords)
         notifyCallbacks()
     }
 
-    func onSettingsChanged(_ callback: @escaping () -> Void) -> Cancellable {
+    public func onSettingsChanged(_ callback: @escaping () -> Void) -> Cancellable {
         let id = UUID()
         callbacks[id] = callback
         return SettingsCancellable { [weak self] in
@@ -111,14 +111,14 @@ class SettingsManager: SettingsManagerProtocol {
 
 // MARK: - SettingsCancellable
 
-class SettingsCancellable: Cancellable {
+public class SettingsCancellable: Cancellable {
     private var onCancel: (() -> Void)?
 
-    init(onCancel: @escaping () -> Void) {
+    public init(onCancel: @escaping () -> Void) {
         self.onCancel = onCancel
     }
 
-    func cancel() {
+    public func cancel() {
         onCancel?()
         onCancel = nil
     }

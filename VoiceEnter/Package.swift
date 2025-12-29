@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "VoiceEnter",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v13)
     ],
     products: [
         .executable(name: "VoiceEnter", targets: ["VoiceEnterApp"]),
@@ -21,7 +21,10 @@ let package = Package(
         .executableTarget(
             name: "VoiceEnterApp",
             dependencies: ["VoiceEnterCore"],
-            path: "Sources/VoiceEnterApp"
+            path: "Sources/VoiceEnterApp",
+            swiftSettings: [
+                .unsafeFlags(["-parse-as-library"])
+            ]
         ),
         // 测试
         .testTarget(

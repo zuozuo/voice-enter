@@ -3,36 +3,36 @@ import Foundation
 // MARK: - InputMonitor
 
 /// 输入监听器 - 监听系统输入并触发回车
-class InputMonitor {
+public class InputMonitor {
     private let keySimulator: KeySimulatorProtocol
     private let settingsManager: SettingsManagerProtocol
     private var detector: TriggerWordDetector
 
-    private(set) var isMonitoring = false
+    public private(set) var isMonitoring = false
 
     /// 触发回调
-    var onTrigger: ((String) -> Void)?
+    public var onTrigger: ((String) -> Void)?
 
     /// 防抖延迟（秒）
-    var debounceDelay: TimeInterval = 0.3
+    public var debounceDelay: TimeInterval = 0.3
 
     private var debounceWorkItem: DispatchWorkItem?
 
-    init(keySimulator: KeySimulatorProtocol, settingsManager: SettingsManagerProtocol) {
+    public init(keySimulator: KeySimulatorProtocol, settingsManager: SettingsManagerProtocol) {
         self.keySimulator = keySimulator
         self.settingsManager = settingsManager
         self.detector = TriggerWordDetector(triggerWords: settingsManager.triggerWords)
     }
 
     /// 开始监听
-    func startMonitoring() {
+    public func startMonitoring() {
         isMonitoring = true
         // 更新检测器的触发词
         detector.updateTriggerWords(settingsManager.triggerWords)
     }
 
     /// 停止监听
-    func stopMonitoring() {
+    public func stopMonitoring() {
         isMonitoring = false
         // 取消任何待处理的防抖任务
         debounceWorkItem?.cancel()
@@ -40,7 +40,7 @@ class InputMonitor {
     }
 
     /// 处理文本输入
-    func handleTextInput(_ text: String) {
+    public func handleTextInput(_ text: String) {
         // 取消之前的防抖任务
         debounceWorkItem?.cancel()
 

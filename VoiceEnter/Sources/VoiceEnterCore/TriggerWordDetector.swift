@@ -3,23 +3,28 @@ import Foundation
 // MARK: - TriggerWordDetector
 
 /// 触发词检测结果
-struct TriggerDetectionResult {
-    let triggerWord: String
-    let contentWithoutTrigger: String
+public struct TriggerDetectionResult {
+    public let triggerWord: String
+    public let contentWithoutTrigger: String
+
+    public init(triggerWord: String, contentWithoutTrigger: String) {
+        self.triggerWord = triggerWord
+        self.contentWithoutTrigger = contentWithoutTrigger
+    }
 }
 
 /// 触发词检测器 - 检测输入文本是否以触发词结尾
-class TriggerWordDetector {
+public class TriggerWordDetector {
     private var triggerWords: [String]
 
-    init(triggerWords: [String]) {
+    public init(triggerWords: [String]) {
         self.triggerWords = triggerWords
     }
 
     /// 检测输入文本是否以触发词结尾
     /// - Parameter text: 输入文本
     /// - Returns: 如果检测到触发词，返回检测结果；否则返回 nil
-    func detect(in text: String) -> TriggerDetectionResult? {
+    public func detect(in text: String) -> TriggerDetectionResult? {
         // 空输入不触发
         guard !text.isEmpty else { return nil }
 
@@ -78,7 +83,7 @@ class TriggerWordDetector {
     }
 
     /// 更新触发词列表
-    func updateTriggerWords(_ words: [String]) {
+    public func updateTriggerWords(_ words: [String]) {
         self.triggerWords = words
     }
 }
