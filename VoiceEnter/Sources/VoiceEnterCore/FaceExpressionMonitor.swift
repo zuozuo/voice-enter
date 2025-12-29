@@ -67,6 +67,7 @@ public class FaceExpressionMonitor: NSObject {
 
     private let sequenceHandler = VNSequenceRequestHandler()
     private let settingsManager: SettingsManager
+    private let keySimulator: KeySimulator
 
     /// 当前启用的触发表情
     public var triggerExpression: ExpressionType = .mouthOpen
@@ -101,6 +102,7 @@ public class FaceExpressionMonitor: NSObject {
 
     public override init() {
         self.settingsManager = SettingsManager()
+        self.keySimulator = KeySimulator(eventPoster: CGEventPoster())
         super.init()
     }
 
@@ -447,6 +449,10 @@ public class FaceExpressionMonitor: NSObject {
         expressionStartTime = nil
 
         voiceLog("[FaceMonitor] ✅ 检测到 \(triggerExpression.rawValue)，系数: \(coefficient)，触发回车")
+
+        // 模拟按下回车键
+        let success = keySimulator.simulateEnter()
+        voiceLog("[FaceMonitor] 回车键发送\(success ? "成功" : "失败")")
 
         onTrigger?(triggerExpression.rawValue)
     }
