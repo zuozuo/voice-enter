@@ -80,13 +80,13 @@ class AppState: ObservableObject {
     @Published var triggerWords: [String] = []
     @Published var lastTriggered: String = ""
 
-    let inputMonitor: KittyTerminalMonitor
+    let inputMonitor: UniversalInputMonitor
     let settingsManager: SettingsManager
 
     var onStatusChange: ((Bool) -> Void)?
 
     init() {
-        self.inputMonitor = KittyTerminalMonitor()
+        self.inputMonitor = UniversalInputMonitor()
         self.settingsManager = SettingsManager()
 
         // 同步设置

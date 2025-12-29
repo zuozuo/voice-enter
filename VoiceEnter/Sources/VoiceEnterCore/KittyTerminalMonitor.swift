@@ -148,6 +148,33 @@ public class KittyTerminalMonitor {
         DispatchQueue.main.asyncAfter(deadline: .now() + debounceDelay, execute: workItem)
     }
 
+    /// Claude Code 状态行的关键词（这些行不是用户输入）
+    private static let claudeStatusKeywords: [String] = [
+        "esc to interrupt",     // 处理中的状态提示
+        "Perambulating",        // 思考动画
+        "Churning",             // 思考动画
+        "Thinking",             // 思考动画
+        "Processing",           // 处理动画
+        "Interrupted",          // 中断状态
+        "What should Claude",   // 中断后的提示
+        "· Perambulating",
+        "· Churning",
+        "· Thinking",
+        "✻", "✽", "✶", "✳", "✢", "·",  // 旋转动画符号
+        "⎿",                    // Claude Code 的缩进符号
+        "[Image #",             // 图片标记
+    ]
+
+    /// 检查是否是 Claude Code 状态行（不是用户输入）
+    private func isClaudeStatusLine(_ line: String) -> Bool {
+        for keyword in Self.claudeStatusKeywords {
+            if line.contains(keyword) {
+                return true
+            }
+        }
+        return false
+    }
+
     /// 从屏幕文本中提取用户输入行
     /// 支持多种模式：Claude Code 的 "> " 提示符、shell 的 "$ " 或 "% " 提示符等
     private func extractUserInputLine(from screenText: String) -> String? {
@@ -182,13 +209,15 @@ public class KittyTerminalMonitor {
                     content = String(line.dropFirst(1))
                 }
                 let trimmed = content.trimmingCharacters(in: .whitespaces)
-                if !trimmed.isEmpty {
+                // 检查是否是状态行
+                if !trimmed.isEmpty && !isClaudeStatusLine(trimmed) {
                     inputLines.append(trimmed)
                 }
             } else if afterPrompt && !isSeparator {
                 // 收集多行输入
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if !trimmed.isEmpty {
+                // 检查是否是状态行
+                if !trimmed.isEmpty && !isClaudeStatusLine(trimmed) {
                     inputLines.append(trimmed)
                 }
             }
