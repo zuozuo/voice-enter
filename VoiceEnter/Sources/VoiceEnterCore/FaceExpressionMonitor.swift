@@ -8,6 +8,7 @@ import AppKit
 /// 支持的表情类型
 public enum ExpressionType: String, CaseIterable, Codable {
     case mouthOpen = "张嘴"
+    case pout = "撅嘴"
     case leftEyeBlink = "左眼眨眼"
     case rightEyeBlink = "右眼眨眼"
     case bothEyesBlink = "双眼眨眼"
@@ -17,7 +18,8 @@ public enum ExpressionType: String, CaseIterable, Codable {
     /// 默认阈值
     public var defaultThreshold: Float {
         switch self {
-        case .mouthOpen: return 0.4
+        case .mouthOpen: return 0.15  // 85% 灵敏度
+        case .pout: return 0.15       // 85% 灵敏度
         case .leftEyeBlink, .rightEyeBlink, .bothEyesBlink: return 0.6
         case .eyebrowRaise: return 0.3
         case .smile: return 0.4
@@ -28,6 +30,7 @@ public enum ExpressionType: String, CaseIterable, Codable {
     public var defaultMinDuration: TimeInterval {
         switch self {
         case .mouthOpen: return 0.3
+        case .pout: return 0.3
         case .leftEyeBlink, .rightEyeBlink, .bothEyesBlink: return 0.15
         case .eyebrowRaise: return 0.3
         case .smile: return 0.5
@@ -286,6 +289,9 @@ public class FaceExpressionMonitor: NSObject {
         // 计算张嘴程度（使用人脸框进行归一化）
         coefficients[.mouthOpen] = calculateMouthOpen(landmarks, faceBounds: faceBounds)
 
+        // 计算撅嘴程度
+        coefficients[.pout] = calculatePout(landmarks, faceBounds: faceBounds)
+
         // 计算眨眼
         coefficients[.leftEyeBlink] = calculateEyeBlink(landmarks.leftEye)
         coefficients[.rightEyeBlink] = calculateEyeBlink(landmarks.rightEye)
@@ -326,6 +332,56 @@ public class FaceExpressionMonitor: NSObject {
         // 张大嘴时约为 0.15-0.25
         // 映射到 0-1 范围
         let normalized = min(max((mouthHeight - 0.04) / 0.15, 0), 1)
+
+        return Float(normalized)
+    }
+
+    /// 计算撅嘴程度 (0.0 ~ 1.0)
+    /// 撅嘴时嘴唇向前突出，嘴巴宽度变窄，嘴唇厚度增加
+    private func calculatePout(_ landmarks: VNFaceLandmarks2D, faceBounds: CGRect) -> Float {
+        guard let outerLips = landmarks.outerLips,
+              let innerLips = landmarks.innerLips else { return 0 }
+
+        let outerPoints = outerLips.normalizedPoints
+        let innerPoints = innerLips.normalizedPoints
+
+        guard outerPoints.count >= 8, innerPoints.count >= 6 else { return 0 }
+
+        // 撅嘴的特征：
+        // 1. 嘴巴宽度变窄（嘴角向中心收拢）
+        // 2. 嘴唇厚度增加（上下唇向外突出）
+
+        // 计算嘴巴宽度（外嘴唇左右角的距离）
+        let leftCorner = outerPoints[outerPoints.count * 3 / 4]
+        let rightCorner = outerPoints[outerPoints.count / 4]
+        let mouthWidth = abs(rightCorner.x - leftCorner.x)
+
+        // 计算嘴唇厚度（外嘴唇上下距离 - 内嘴唇上下距离）
+        let outerTop = outerPoints[0]
+        let outerBottom = outerPoints[outerPoints.count / 2]
+        let outerHeight = abs(outerTop.y - outerBottom.y)
+
+        let innerTop = innerPoints[0]
+        let innerBottom = innerPoints[innerPoints.count / 2]
+        let innerHeight = abs(innerTop.y - innerBottom.y)
+
+        let lipThickness = outerHeight - innerHeight
+
+        // 宽高比：撅嘴时宽度变窄，高度可能略增
+        // 正常嘴巴宽高比约 0.15-0.20（宽度 / 人脸高度）
+        // 撅嘴时约 0.08-0.12
+
+        // 使用宽度减少的程度来判断撅嘴
+        // 正常宽度约 0.15，撅嘴约 0.08
+        let widthFactor = max(0, (0.14 - mouthWidth) / 0.06)
+
+        // 嘴唇厚度增加也是撅嘴特征
+        // 正常厚度约 0.02，撅嘴约 0.04
+        let thicknessFactor = max(0, (lipThickness - 0.015) / 0.025)
+
+        // 综合评分：宽度因素权重 70%，厚度因素权重 30%
+        let combined = widthFactor * 0.7 + thicknessFactor * 0.3
+        let normalized = min(max(combined, 0), 1)
 
         return Float(normalized)
     }

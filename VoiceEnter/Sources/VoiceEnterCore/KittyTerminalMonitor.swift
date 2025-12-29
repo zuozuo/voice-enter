@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import AVFoundation
 
 // MARK: - KittyTerminalMonitor
 
@@ -335,11 +336,31 @@ public class KittyTerminalMonitor {
         let deleteCount = result.triggerWord.count + trailingCount
         
         voiceLog("[KittyMonitor] ✅ 检测到触发词 '\(result.triggerWord)'，删除 \(deleteCount) 个字符后回车")
-        
+
+        // 播放触发音效
+        playTriggerSound()
+
         DispatchQueue.main.async { [weak self] in
             _ = self?.keySimulator.deleteThenEnter(deleteCount: deleteCount)
             self?.lastInputLine = ""
             self?.onTrigger?(result.triggerWord)
+        }
+    }
+
+    /// 播放触发音效
+    private func playTriggerSound() {
+        let sound = settingsManager.triggerSound
+        guard let soundName = sound.systemName else {
+            voiceLog("[KittyMonitor] 音效已关闭")
+            return
+        }
+
+        if let nsSound = NSSound(named: soundName) {
+            nsSound.play()
+            voiceLog("[KittyMonitor] 播放触发音效: \(soundName)")
+        } else {
+            NSSound.beep()
+            voiceLog("[KittyMonitor] 播放系统提示音（\(soundName) 不可用）")
         }
     }
 }

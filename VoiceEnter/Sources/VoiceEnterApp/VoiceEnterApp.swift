@@ -85,9 +85,9 @@ class AppState: ObservableObject {
     @Published var triggerScope: TriggerScope = .kittyOnly
 
     // 面部表情触发相关
-    @Published var isFaceExpressionEnabled: Bool = false
+    @Published var isFaceExpressionEnabled: Bool = true  // 默认开启
     @Published var selectedExpression: ExpressionType = .mouthOpen
-    @Published var expressionThreshold: Float = 0.4
+    @Published var expressionThreshold: Float = 0.15  // 默认 85% 灵敏度
     @Published var hasFaceDetected: Bool = false
     @Published var currentExpressionValue: Float = 0
 
@@ -112,6 +112,11 @@ class AppState: ObservableObject {
         self.triggerScope = settingsManager.triggerScope
         self.triggerSound = settingsManager.triggerSound
         self.inputMonitor.faceMonitor.triggerSound = settingsManager.triggerSound
+
+        // 同步表情触发默认设置
+        self.inputMonitor.faceMonitor.isExpressionTriggerEnabled = isFaceExpressionEnabled
+        self.inputMonitor.faceMonitor.threshold = expressionThreshold
+        self.inputMonitor.faceMonitor.triggerExpression = selectedExpression
 
         // 监听触发事件
         inputMonitor.onTrigger = { [weak self] word in
@@ -674,28 +679,6 @@ struct MenuBarView: View {
                             .frame(height: 10)
                         }
 
-                        // 触发音效选择
-                        HStack {
-                            Text("触发音效")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(theme.secondaryText)
-                            Spacer()
-                            Picker("", selection: Binding(
-                                get: { appState.triggerSound },
-                                set: { sound in
-                                    appState.setTriggerSound(sound)
-                                    appState.previewSound(sound)
-                                }
-                            )) {
-                                ForEach(TriggerSound.allCases, id: \.self) { sound in
-                                    Text(sound.displayName).tag(sound)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(width: 90)
-                            .tint(theme.accent)
-                        }
-
                         // 使用提示
                         HStack(spacing: 6) {
                             Image(systemName: "lightbulb.fill")
@@ -754,25 +737,53 @@ struct MenuBarView: View {
                 .buttonStyle(.plain)
             }
 
-            // 主题选择
-            HStack {
-                Text("外观")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(theme.secondaryText)
-                Spacer()
-                Picker("", selection: Binding(
-                    get: { appState.themeMode },
-                    set: { appState.setThemeMode($0) }
-                )) {
-                    ForEach(ThemeMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
+            // 全局设置（主题 + 音效）
+            VStack(spacing: 10) {
+                // 触发音效选择
+                HStack {
+                    Text("触发音效")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(theme.secondaryText)
+                    Spacer()
+                    Picker("", selection: Binding(
+                        get: { appState.triggerSound },
+                        set: { sound in
+                            appState.setTriggerSound(sound)
+                            appState.previewSound(sound)
+                        }
+                    )) {
+                        ForEach(TriggerSound.allCases, id: \.self) { sound in
+                            Text(sound.displayName).tag(sound)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .frame(width: 100)
+                    .tint(theme.accent)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 180)
+
+                Divider()
+                    .background(theme.border)
+
+                // 主题选择
+                HStack {
+                    Text("外观")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(theme.secondaryText)
+                    Spacer()
+                    Picker("", selection: Binding(
+                        get: { appState.themeMode },
+                        set: { appState.setThemeMode($0) }
+                    )) {
+                        ForEach(ThemeMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(theme.cardBackground)
