@@ -161,7 +161,6 @@ public class KittyTerminalMonitor {
         "· Churning",
         "· Thinking",
         "✻", "✽", "✶", "✳", "✢", "·",  // 旋转动画符号
-        "⎿",                    // Claude Code 的缩进符号
         "[Image #",             // 图片标记
     ]
 
@@ -175,13 +174,29 @@ public class KittyTerminalMonitor {
         return false
     }
 
+    /// Claude 响应开始的标记（遇到这些标记就停止收集用户输入）
+    private static let claudeResponseMarkers: [String] = [
+        "⏺",                    // Claude 响应开始标记
+        "⎿",                    // Claude Code 的缩进符号
+    ]
+
+    /// 检查是否是 Claude 响应行的开始
+    private func isClaudeResponseStart(_ line: String) -> Bool {
+        for marker in Self.claudeResponseMarkers {
+            if line.contains(marker) {
+                return true
+            }
+        }
+        return false
+    }
+
     /// 从屏幕文本中提取用户输入行
     /// 支持多种模式：Claude Code 的 "> " 提示符、shell 的 "$ " 或 "% " 提示符等
     private func extractUserInputLine(from screenText: String) -> String? {
         let lines = screenText.components(separatedBy: .newlines)
 
         // 模式1: Claude Code 输入区域
-        // 结构: 分隔线 -> "> " 行 -> (可能的多行输入) -> 分隔线
+        // 结构: 分隔线 -> "> " 行 -> (可能的多行输入) -> 分隔线 或 Claude 响应
         var foundSeparator = false
         var inputLines: [String] = []
         var afterPrompt = false
@@ -198,6 +213,11 @@ public class KittyTerminalMonitor {
                 continue
             }
 
+            // 如果遇到 Claude 响应开始标记，停止收集
+            if afterPrompt && isClaudeResponseStart(line) {
+                break
+            }
+
             // 查找 "> " 开头的行
             if foundSeparator && (line.hasPrefix("> ") || line.hasPrefix(">")) {
                 afterPrompt = true
@@ -209,15 +229,15 @@ public class KittyTerminalMonitor {
                     content = String(line.dropFirst(1))
                 }
                 let trimmed = content.trimmingCharacters(in: .whitespaces)
-                // 检查是否是状态行
-                if !trimmed.isEmpty && !isClaudeStatusLine(trimmed) {
+                // 检查是否是状态行或 Claude 响应
+                if !trimmed.isEmpty && !isClaudeStatusLine(trimmed) && !isClaudeResponseStart(trimmed) {
                     inputLines.append(trimmed)
                 }
             } else if afterPrompt && !isSeparator {
                 // 收集多行输入
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
-                // 检查是否是状态行
-                if !trimmed.isEmpty && !isClaudeStatusLine(trimmed) {
+                // 检查是否是状态行或 Claude 响应
+                if !trimmed.isEmpty && !isClaudeStatusLine(trimmed) && !isClaudeResponseStart(trimmed) {
                     inputLines.append(trimmed)
                 }
             }
