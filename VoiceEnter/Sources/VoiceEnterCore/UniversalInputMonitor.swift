@@ -7,11 +7,15 @@ import AppKit
 /// - TextMonitor: 使用 Accessibility API，用于普通应用（Notes, Safari, 浏览器等）
 /// - KittyTerminalMonitor: 使用 kitty 远程控制 API，用于 kitty 终端
 /// - TerminalAppMonitor: 使用 AppleScript，用于 macOS 原生 Terminal.app
+/// - FaceExpressionMonitor: 使用摄像头检测面部表情，作为触发词的补充
 public class UniversalInputMonitor {
     private let textMonitor: TextMonitor
     private let kittyMonitor: KittyTerminalMonitor
     private let terminalMonitor: TerminalAppMonitor
     private let settingsManager: SettingsManager
+
+    /// 面部表情监听器（公开以便配置）
+    public let faceMonitor: FaceExpressionMonitor
 
     /// 触发回调
     public var onTrigger: ((String) -> Void)? {
@@ -19,6 +23,14 @@ public class UniversalInputMonitor {
             textMonitor.onTrigger = onTrigger
             kittyMonitor.onTrigger = onTrigger
             terminalMonitor.onTrigger = onTrigger
+            faceMonitor.onTrigger = onTrigger
+        }
+    }
+
+    /// 表情状态变化回调
+    public var onExpressionChange: ((ExpressionState) -> Void)? {
+        didSet {
+            faceMonitor.onExpressionChange = onExpressionChange
         }
     }
 
@@ -33,6 +45,7 @@ public class UniversalInputMonitor {
         self.textMonitor = TextMonitor()
         self.kittyMonitor = KittyTerminalMonitor()
         self.terminalMonitor = TerminalAppMonitor()
+        self.faceMonitor = FaceExpressionMonitor()
     }
 
     /// 开始监听
@@ -65,8 +78,16 @@ public class UniversalInputMonitor {
             voiceLog("[UniversalMonitor] TerminalAppMonitor 启动失败（Terminal.app 可能未运行）")
         }
 
+        // 启动 FaceExpressionMonitor（如果有摄像头权限）
+        let faceStarted = faceMonitor.startMonitoring()
+        if faceStarted {
+            voiceLog("[UniversalMonitor] FaceExpressionMonitor 启动成功")
+        } else {
+            voiceLog("[UniversalMonitor] FaceExpressionMonitor 启动失败（可能缺少摄像头权限）")
+        }
+
         // 只要有一个成功就算成功
-        isMonitoring = textStarted || kittyStarted || terminalStarted
+        isMonitoring = textStarted || kittyStarted || terminalStarted || faceStarted
 
         if isMonitoring {
             voiceLog("[UniversalMonitor] 通用输入监听器已启动")
@@ -85,6 +106,7 @@ public class UniversalInputMonitor {
         textMonitor.stopMonitoring()
         kittyMonitor.stopMonitoring()
         terminalMonitor.stopMonitoring()
+        faceMonitor.stopMonitoring()
 
         isMonitoring = false
         onStatusChange?(false)
