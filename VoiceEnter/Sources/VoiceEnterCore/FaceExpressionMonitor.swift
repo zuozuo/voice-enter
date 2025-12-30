@@ -338,50 +338,35 @@ public class FaceExpressionMonitor: NSObject {
 
     /// 计算撅嘴程度 (0.0 ~ 1.0)
     /// 撅嘴时嘴唇向前突出，嘴巴宽度变窄，嘴唇厚度增加
+    /// 使用宽高比来检测：撅嘴时宽度变窄，高度增加，所以宽高比下降
     private func calculatePout(_ landmarks: VNFaceLandmarks2D, faceBounds: CGRect) -> Float {
-        guard let outerLips = landmarks.outerLips,
-              let innerLips = landmarks.innerLips else { return 0 }
+        guard let outerLips = landmarks.outerLips else { return 0 }
 
         let outerPoints = outerLips.normalizedPoints
-        let innerPoints = innerLips.normalizedPoints
-
-        guard outerPoints.count >= 8, innerPoints.count >= 6 else { return 0 }
-
-        // 撅嘴的特征：
-        // 1. 嘴巴宽度变窄（嘴角向中心收拢）
-        // 2. 嘴唇厚度增加（上下唇向外突出）
+        guard outerPoints.count >= 8 else { return 0 }
 
         // 计算嘴巴宽度（外嘴唇左右角的距离）
         let leftCorner = outerPoints[outerPoints.count * 3 / 4]
         let rightCorner = outerPoints[outerPoints.count / 4]
         let mouthWidth = abs(rightCorner.x - leftCorner.x)
 
-        // 计算嘴唇厚度（外嘴唇上下距离 - 内嘴唇上下距离）
-        let outerTop = outerPoints[0]
-        let outerBottom = outerPoints[outerPoints.count / 2]
-        let outerHeight = abs(outerTop.y - outerBottom.y)
+        // 计算嘴巴高度（外嘴唇上下距离）
+        let topPoint = outerPoints[0]
+        let bottomPoint = outerPoints[outerPoints.count / 2]
+        let mouthHeight = abs(topPoint.y - bottomPoint.y)
 
-        let innerTop = innerPoints[0]
-        let innerBottom = innerPoints[innerPoints.count / 2]
-        let innerHeight = abs(innerTop.y - innerBottom.y)
+        // 防止除零
+        guard mouthHeight > 0.001 else { return 0 }
 
-        let lipThickness = outerHeight - innerHeight
+        // 计算宽高比
+        // 正常闭嘴：宽度约 0.35-0.45，高度约 0.03-0.05，宽高比约 8-12
+        // 撅嘴时：宽度变窄约 0.25-0.30，高度增加约 0.06-0.10，宽高比约 3-5
+        let widthHeightRatio = mouthWidth / mouthHeight
 
-        // 宽高比：撅嘴时宽度变窄，高度可能略增
-        // 正常嘴巴宽高比约 0.15-0.20（宽度 / 人脸高度）
-        // 撅嘴时约 0.08-0.12
-
-        // 使用宽度减少的程度来判断撅嘴
-        // 正常宽度约 0.15，撅嘴约 0.08
-        let widthFactor = max(0, (0.14 - mouthWidth) / 0.06)
-
-        // 嘴唇厚度增加也是撅嘴特征
-        // 正常厚度约 0.02，撅嘴约 0.04
-        let thicknessFactor = max(0, (lipThickness - 0.015) / 0.025)
-
-        // 综合评分：宽度因素权重 70%，厚度因素权重 30%
-        let combined = widthFactor * 0.7 + thicknessFactor * 0.3
-        let normalized = min(max(combined, 0), 1)
+        // 撅嘴检测：宽高比低于正常值
+        // 正常宽高比 > 6，撅嘴宽高比 < 5
+        // 映射到 0-1：宽高比从 6 降到 3 时，撅嘴程度从 0 升到 1
+        let normalized = max(0, min((6.0 - widthHeightRatio) / 3.0, 1))
 
         return Float(normalized)
     }
